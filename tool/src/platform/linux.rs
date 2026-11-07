@@ -93,25 +93,80 @@ pub fn bus_reset(_info: &DeviceInfo, dev: &Device, log: &dyn Fn(String)) -> Resu
     }
 }
 
-/// Install the udev rule when running as root. Returns true if something was changed.
+/// Install the udev rule: directly when root, otherwise through pkexec (polkit password prompt).
+/// Returns true if something was changed.
 pub fn prepare_runtime_dfu_access(log: &dyn Fn(String)) -> Result<bool> {
     if Path::new(UDEV_RULE_PATH).exists() {
         return Ok(false);
     }
+    if is_root() {
+        install_udev_rule(log)?;
+    } else {
+        install_udev_rule_pkexec(log)?;
+    }
+    Ok(true)
+}
+
+/// Write the rule and apply it to connected devices. Needs root; never elevates by itself
+/// (this is what `mtrack-fix install-udev-rule` runs under pkexec).
+pub fn install_udev_rule(log: &dyn Fn(String)) -> Result<()> {
     if !is_root() {
-        anyhow::bail!(
-            "USB access needs root or a udev rule. Either run this tool once with sudo/pkexec (it will \
-             install {UDEV_RULE_PATH}), or create that file with:\n{}",
-            udev_rule_text()
-        );
+        anyhow::bail!("install-udev-rule must run as root");
     }
     fs::write(UDEV_RULE_PATH, udev_rule_text()).with_context(|| format!("write {UDEV_RULE_PATH}"))?;
     log(format!("Installed {UDEV_RULE_PATH}"));
-    for args in [["control", "--reload-rules"], ["trigger", "--subsystem-match=usb"]] {
+    // --settle: return only after udev has applied MODE/uaccess to the connected device.
+    for args in [
+        &["control", "--reload-rules"][..],
+        &["trigger", "--subsystem-match=usb", "--settle"],
+    ] {
         let _ = std::process::Command::new("udevadm").args(args).status();
     }
     log("Reloaded udev rules.".into());
-    Ok(true)
+    Ok(())
+}
+
+fn install_udev_rule_pkexec(log: &dyn Fn(String)) -> Result<()> {
+    let manual = || {
+        format!(
+            "Run `sudo mtrack-fix fix-host` once, or create {UDEV_RULE_PATH} with:\n{}",
+            udev_rule_text()
+        )
+    };
+    let exe = std::env::current_exe().context("locate this program")?;
+    log("Asking for the administrator password (pkexec) to install the udev rule ...".into());
+    let out = match std::process::Command::new("pkexec")
+        .arg(&exe)
+        .arg("install-udev-rule")
+        .output()
+    {
+        Ok(o) => o,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => {
+            anyhow::bail!("USB access needs root and pkexec is not installed. {}", manual())
+        }
+        Err(e) => return Err(anyhow::Error::new(e).context("run pkexec")),
+    };
+    for line in String::from_utf8_lossy(&out.stdout)
+        .lines()
+        .chain(String::from_utf8_lossy(&out.stderr).lines())
+        .filter(|l| !l.trim().is_empty())
+    {
+        log(format!("  {line}"));
+    }
+    let stderr = String::from_utf8_lossy(&out.stderr).to_lowercase();
+    match out.status.code() {
+        _ if Path::new(UDEV_RULE_PATH).exists() => Ok(()),
+        // pkexec exits 126 or 127 when the dialog is dismissed (KDE's agent: 127 "Not authorized"),
+        // and 127 with "No authentication agent found" when there is no agent (SSH, bare TTY).
+        Some(126 | 127) if stderr.contains("authentication agent") => {
+            anyhow::bail!("no polkit password agent is running (e.g. over SSH). {}", manual())
+        }
+        Some(126 | 127) => anyhow::bail!(
+            "the password prompt was cancelled or the password was not accepted. Click the button again to retry. {}",
+            manual()
+        ),
+        c => anyhow::bail!("installing the udev rule failed (exit {c:?}). {}", manual()),
+    }
 }
 
 pub fn prepare_dfu_mode_access(log: &dyn Fn(String)) -> Result<bool> {

@@ -27,9 +27,9 @@ Details: [docs/the-problem.md](docs/the-problem.md).
 
 ## Download
 
-Ready-made builds for Windows and Linux will be on the
-[releases page](https://github.com/nmjbhoffmann/m-audio2x2/releases) (coming soon). Until then,
-see "Build it yourself" below.
+Ready-made builds for Windows and Linux are on the
+[releases page](https://github.com/nmjbhoffmann/m-audio2x2/releases): `mtrack-fix-windows-x64.exe`
+and `mtrack-fix-linux-x64`. The fixed firmware is built into both. Or see "Build it yourself" below.
 
 ## How to use (Windows)
 

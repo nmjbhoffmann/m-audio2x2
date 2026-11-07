@@ -114,7 +114,12 @@ Goal: no downloads, no third-party driver packages, in-box components only.
 
 - `snd-usb-audio` claims interfaces 0 to 2 only; interface 3 is free. No driver work.
 - Permission: a udev rule (`/etc/udev/rules.d/70-mtrack2x2-dfu.rules`, `MODE="0666"`,
-  `TAG+="uaccess"` for both PIDs), installed by `sudo mtrack-fix fix-host`. Or run as root.
+  `TAG+="uaccess"` for both PIDs). Run as a normal user, the tool installs it through
+  `pkexec mtrack-fix install-udev-rule` (a hidden subcommand that only writes the rule and never
+  elevates itself), then `udevadm trigger --settle` so the running device gets the new mode at once.
+  `sudo mtrack-fix fix-host` does the same without polkit. Or run as root.
+- Open race: every mode switch creates a new device node, which is root-only for a moment until udev
+  applies the rule. The tool retries "permission denied" for up to 3 s before giving up.
 - Bus reset: `USBDEVFS_RESET` through the device node, which is a real port reset on Linux.
 - The one-request rule and the `c00b` PID apply exactly as on Windows.
 

@@ -87,6 +87,9 @@ fn cli(args: &[String]) -> anyhow::Result<String> {
             Ok(String::new())
         }
         Some("fix-host") => engine.fix_host(),
+        // Internal: what the Linux GUI/CLI runs under pkexec. Not listed in the usage text.
+        #[cfg(target_os = "linux")]
+        Some("install-udev-rule") => platform::install_udev_rule(&|l| println!("{l}")).map(|()| String::new()),
         Some("flash") => {
             let fw = match positional.get(1) {
                 Some(p) => {

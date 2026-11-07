@@ -1,6 +1,6 @@
 [package]
 name = "mtrack-fix"
-version = "0.1.0"
+version = "1.0.0"
 edition = "2021"
 description = "Firmware fix tool for the M-Audio M-Track 2X2 (USB capture descriptor bug)"
 license = "MIT"

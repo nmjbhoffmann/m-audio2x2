@@ -66,24 +66,26 @@ Both inputs arrive as one stereo recording device: input 1 on the left channel, 
 Linux does not need the fix for audio. You might still apply it so the unit works on a Windows machine
 later, or to run the tool's checks.
 
-1. Build or download `mtrack-fix` (see [building.md](building.md)).
-2. Once, as root, let normal users talk to the device's update interface:
+1. Download `mtrack-fix-linux-x64` from the
+   [releases page](https://github.com/nmjbhoffmann/m-audio2x2/releases), or build it
+   (see [building.md](building.md)). Make it executable:
 
    ```
-   sudo ./mtrack-fix fix-host
+   chmod +x mtrack-fix-linux-x64
+   mv mtrack-fix-linux-x64 mtrack-fix
    ```
 
-   This writes `/etc/udev/rules.d/70-mtrack2x2-dfu.rules`. Unplug and replug the interface so the rule
-   applies.
-3. As a normal user:
+2. Start `./mtrack-fix` as your normal user (not with `sudo`). The window opens.
+3. The first time, the status list says there is no udev rule. Click **Set up USB access** and enter
+   your password when asked. This installs `/etc/udev/rules.d/70-mtrack2x2-dfu.rules`, which lets
+   normal users talk to the device's update interface. It applies at once; no replug needed.
+   Flashing without the rule asks for the password the same way.
+4. Click **Flash firmware**. The steps are the same as on Windows.
+5. `lsusb -v -d 0763:400b | grep -A3 "OUTPUT_TERMINAL.*22"` now shows `bSourceID 1`.
 
-   ```
-   ./mtrack-fix check
-   ./mtrack-fix flash
-   ```
-
-   Or start `./mtrack-fix` without arguments for the window.
-4. `lsusb -v -d 0763:400b | grep -A3 "OUTPUT_TERMINAL.*22"` now shows `bSourceID 1`.
+From a terminal, `./mtrack-fix check` and `./mtrack-fix flash` do the same. Without a desktop (for
+example over SSH) there is no password prompt; install the rule with `sudo ./mtrack-fix fix-host`
+once instead.
 
 No kernel driver is replaced on Linux. The sound driver only claims the audio interfaces; the update
 interface is free.
@@ -112,7 +114,9 @@ as administrator.
 | "This must be the first DFU request since power-up" | Informational. The device only tolerates one update request per power-up in audio mode. | Nothing. If a previous attempt failed after this point, replug before retrying. |
 | "Nothing to do: this firmware is already installed" | The device already holds exactly this image. | Nothing. Use `--force` or the "Re-flash" checkbox if you really want to rewrite it. |
 | "the M-Audio driver is installed; remove it first" | The vendor package is present. | Step 1 above. |
-| "this needs administrator/root rights" | Driver binding, the hub port reset and the udev rule need elevation. | Windows: run as administrator. Linux: `sudo` for `fix-host` only. |
+| "this needs administrator/root rights" | Driver binding and the hub port reset need elevation. | Windows: run as administrator. |
+| "the password prompt was cancelled" (Linux) | The udev rule was not installed. | Click **Set up USB access** again and enter your password. |
+| "no polkit password agent is running" (Linux) | No desktop session to ask for the password, for example over SSH. | `sudo ./mtrack-fix fix-host` once. |
 
 ## Troubleshooting
 
@@ -146,8 +150,8 @@ image; please report the output of `check` and your firmware version.
 still in Windows' driver store. Run **Remove M-Audio driver** again; it also deletes leftover
 `oem*.inf` packages. Reboot.
 
-**Linux: "permission denied" or the device is not found.** Run `sudo ./mtrack-fix fix-host` once and
-replug, or run the whole tool with `sudo`.
+**Linux: "permission denied" or the device is not found.** Click **Set up USB access** (or run
+`sudo ./mtrack-fix fix-host` once). If it still fails, replug the interface.
 
 **Going back.** **Revert to factory** / `mtrack-fix revert` at any time. It follows the same
 detach-and-reset dance, erases the upgrade image, and the device boots the factory firmware.

@@ -74,7 +74,7 @@ them touch hardware.
 for every push and pull request: format check, clippy, tests, release build. It uploads the two
 binaries and the firmware image as build artifacts with a `SHA256SUMS.txt`.
 
-Pushing a tag that starts with `v` (for example `v0.1.0`) additionally creates a GitHub release with
+Pushing a tag that starts with `v` (for example `v1.0.0`) additionally creates a GitHub release with
 `mtrack-fix-windows-x64.exe`, `mtrack-fix-linux-x64` and `mtrack2x2-upgrade-v1-signed.bin`.
 
 ## Cross-compiling

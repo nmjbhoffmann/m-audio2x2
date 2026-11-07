@@ -308,7 +308,7 @@ impl App {
                 }
             } else if ui
                 .add_enabled(!self.busy, egui::Button::new("Set up USB access"))
-                .on_hover_text("Installs a udev rule so the tool can talk to the device without root. Needs root once.")
+                .on_hover_text("Installs a udev rule so the tool can talk to the device without root. Asks for the administrator password once (pkexec).")
                 .clicked()
             {
                 self.spawn(&ctx, |e| e.fix_host());

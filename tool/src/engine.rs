@@ -121,7 +121,8 @@ impl Engine {
     pub fn fix_host(&self) -> Result<String> {
         self.step("Checking the host");
         let host = platform::host_report(find_mode(Mode::Runtime).as_ref(), find_mode(Mode::Dfu).as_ref());
-        if host.needs_privilege {
+        // Linux elevates just the udev-rule install through pkexec, so it can go on unprivileged.
+        if host.needs_privilege && !cfg!(target_os = "linux") {
             bail!("this needs administrator/root rights; restart the tool elevated");
         }
         if host.vendor_driver {
@@ -209,7 +210,7 @@ impl Engine {
     /// Open + claim the DFU interface; if the OS side is not set up yet (WinUSB / udev), set it
     /// up and retry once.
     fn open_with_setup(&self, info: DeviceInfo, mode: Mode) -> Result<DfuDevice> {
-        match DfuDevice::open(info.clone()) {
+        match self.open_settled(&info) {
             Ok(d) => Ok(d),
             Err(e) => {
                 self.log(format!("Cannot use the DFU interface yet: {e:#}"));
@@ -225,6 +226,25 @@ impl Engine {
                 }
                 let info = self.wait_for_mode(mode, Duration::from_secs(15))?;
                 DfuDevice::open(info).context("DFU interface still not accessible after setup")
+            }
+        }
+    }
+
+    /// Open the DFU interface. On Linux a freshly enumerated node is root-only for a moment until
+    /// udev applies the rule (MODE/uaccess), so retry "permission denied" briefly before giving up.
+    fn open_settled(&self, info: &DeviceInfo) -> Result<DfuDevice> {
+        let end = Instant::now() + Duration::from_secs(3);
+        loop {
+            match DfuDevice::open(info.clone()) {
+                Ok(d) => return Ok(d),
+                Err(e)
+                    if cfg!(target_os = "linux")
+                        && Instant::now() < end
+                        && format!("{e:#}").to_lowercase().contains("permission denied") =>
+                {
+                    self.sleep(Duration::from_millis(200))?;
+                }
+                Err(e) => return Err(e),
             }
         }
     }
@@ -361,7 +381,8 @@ impl Engine {
         if host.vendor_driver {
             bail!("the M-Audio driver is installed; remove it first (\"Remove M-Audio driver\"), reboot, replug");
         }
-        if host.needs_privilege {
+        // Linux: opening the device below installs the udev rule through pkexec if needed.
+        if host.needs_privilege && !cfg!(target_os = "linux") {
             bail!(
                 "missing rights: {}",
                 if cfg!(windows) {
