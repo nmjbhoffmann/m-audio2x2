@@ -1,0 +1,17 @@
+===== msft_wave  (\\?\USB#VID_0763&PID_400B&MI_00#7&438c9a2&0&0000#{6994ad04-93ef-11d0-a3cc-00a0c9223196}\msft_wave)
+  pin 0: flow=OUT (source: data out of filter) comm=NONE (bridge)  category=KSCATEGORY_AUDIO  name=''
+  pin 1: flow=IN (sink: data into filter)    comm=SINK           category=KSCATEGORY_AUDIO  name=''
+  pin 2: flow=OUT (source: data out of filter) comm=SINK           category=KSCATEGORY_AUDIO  name=''
+  pin 3: flow=IN (sink: data into filter)    comm=NONE (bridge)  category=KSCATEGORY_AUDIO  name=''
+  node 0: KSNODETYPE_DAC
+  node 1: KSNODETYPE_ADC
+  conn: node0.0 -> FILTER.pin0
+  conn: node1.0 -> FILTER.pin2
+  conn: FILTER.pin1 -> node0.1
+  conn: FILTER.pin3 -> node1.1
+===== msft_topo  (\\?\USB#VID_0763&PID_400B&MI_00#7&438c9a2&0&0000#{6994ad04-93ef-11d0-a3cc-00a0c9223196}\msft_topo)
+  pin 0: flow=OUT (source: data out of filter) comm=NONE (bridge)  category=dff21ce1-f70f-11d0-b917-00a0c9223196  name='Speakers'
+  pin 1: flow=IN (sink: data into filter)    comm=NONE (bridge)  category=KSCATEGORY_AUDIO  name=''
+  pin 2: flow=OUT (source: data out of filter) comm=NONE (bridge)  category=KSCATEGORY_AUDIO  name=''
+  conn: FILTER.pin1 -> FILTER.pin0
+  conn: FILTER.pin1 -> FILTER.pin2
