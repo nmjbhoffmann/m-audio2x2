@@ -35,7 +35,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           workspaces: tool
-      - name: Linux build dependencies (egui/winit: X11, Wayland, OpenGL headers)
+      - name: "Linux build dependencies (egui/winit: X11, Wayland, OpenGL headers)"
         if: runner.os == 'Linux'
         run: |
           sudo apt-get update
